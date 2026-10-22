@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sistema Integrado | PDF + HTML Auto Processor</title>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --bg:#080c14;
+    --surface:#0d1526;
+    --border:#1a2744;
+    --accent:#2563eb;
+    --accent2:#38bdf8;
+    --green:#22c55e;
+    --red:#ef4444;
+    --yellow:#eab308;
+    --text:#e2e8f0;
+    --muted:#64748b;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Syne',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+}
+
+body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image:
+        linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    padding:40px 20px;
+    position:relative;
+    z-index:2;
+}
+
+.tag{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--accent2);
+    font-size:11px;
+    letter-spacing:0.25em;
+    margin-bottom:14px;
+    text-transform:uppercase;
+}
+
+h1{
+    font-size:clamp(32px,5vw,58px);
+    line-height:1;
+    margin-bottom:10px;
+}
+
+h1 span{
+    color:var(--accent2);
+}
+
+.subtitle{
+    color:var(--muted);
+    margin-bottom:35px;
+}
+
+.card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:30px;
+}
+
+.mode-selector{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:25px;
+}
+
+.mode-btn{
+    background:#101827;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+    cursor:pointer;
+    transition:0.2s;
+    text-align:left;
+    color:white;
+}
+
+.mode-btn.active{
+    border-color:var(--accent2);
+    background:rgba(37,99,235,0.15);
+}
+
+.mode-btn h3{
+    margin-bottom:8px;
+}
+
+.mode-btn p{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.5;
+}
+
+.steps{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:25px;
+}
+
+.step{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+}
+
+.step strong{
+    display:block;
+    margin-bottom:6px;
+}
+
+.step p{
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.5;
+}
+
+.controls{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+}
+
+.btn{
+    border:none;
+    border-radius:12px;
+    padding:16px;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:700;
+    transition:0.2s;
+    font-family:'Syne',sans-serif;
+}
+
+.btn:hover{
+    transform:translateY(-1px);
+}
+
+.btn-primary{
+    background:var(--accent);
+    color:white;
+}
+
+.btn-primary:hover{
+    background:#1d4ed8;
+}
+
+.btn-secondary{
+    background:rgba(56,189,248,0.08);
+    color:var(--accent2);
+    border:1px solid rgba(56,189,248,0.2);
+}
+
+.btn:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+}
+
+#folderIndicator{
+    display:none;
+    margin-top:18px;
+    padding:14px;
+    border-radius:10px;
+    background:rgba(34,197,94,0.08);
+    border:1px solid rgba(34,197,94,0.2);
+    color:var(--green);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+}
+
+#progressArea{
+    display:none;
+    margin-top:30px;
+}
+
+.progress-header{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+#statusLabel{
+    color:var(--accent2);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+}
+
+#counter{
+    color:var(--muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+}
+
+.progress-track{
+    width:100%;
+    height:6px;
+    background:#111827;
+    border-radius:999px;
+    overflow:hidden;
+}
+
+#progressBar{
+    width:0%;
+    height:100%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transition:width 0.15s ease-out;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-top:20px;
+}
+
+.stat{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+    text-align:center;
+}
+
+.stat-value{
+    font-size:24px;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+}
+
+.total{ color:var(--accent2); }
+.ok{ color:var(--green); }
+.err{ color:var(--red); }
+
+.stat-label{
+    margin-top:4px;
+    font-size:11px;
+    color:var(--muted);
+}
+
+#logConsole{
+    margin-top:25px;
+    background:#020408;
+    border:1px solid var(--border);
+    border-radius:12px;
+    height:280px;
+    overflow-y:auto;
+    padding:16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+}
+
+.log-line{
+    line-height:1.8;
+}
+
+.log-time{
+    color:#334155;
+    margin-right:8px;
+}
+
+.done{
+    display:none;
+    margin-top:20px;
+    padding:16px;
+    border-radius:12px;
+    background:rgba(34,197,94,0.08);
+    border:1px solid rgba(34,197,94,0.2);
+    color:var(--green);
+}
+
+.warning{
+    display:none;
+    margin-top:18px;
+    padding:16px;
+    border-radius:10px;
+    background:rgba(234,179,8,0.08);
+    border:1px solid rgba(234,179,8,0.2);
+    color:#facc15;
+    line-height:1.6;
+}
+
+.info{
+    margin-top:22px;
+    padding:18px;
+    border-radius:12px;
+    background:rgba(37,99,235,0.06);
+    border:1px solid rgba(56,189,248,0.15);
+    color:#cbd5e1;
+    line-height:1.8;
+    font-size:14px;
+}
+
+#renderArea{
+    position:absolute;
+    left:-99999px;
+    top:0;
+    width:1200px;
+    background:white;
+}
+
+@media(max-width:750px){
+
+    .mode-selector,
+    .steps,
+    .controls,
+    .stats{
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="tag">
+SISTEMA AUTOMATIZADO
+</div>
+
+<h1>
+PDF + HTML<br>
+<span>Processing System</span>
+</h1>
+
+<p class="subtitle">
+Renombrado inteligente · Conversión masiva · Guardado automático silencioso
+</p>
+
+<div class="card">
+
+<div class="mode-selector">
+
+<button class="mode-btn active" id="modePDF">
+
+<h3>📄 Renombrar PDFs</h3>
+
+<p>
+Extrae automáticamente Seguimiento Andreani + ID y renombra PDFs.
+</p>
+
+</button>
+
+<button class="mode-btn" id="modeHTML">
+
+<h3>🌐 HTML → PDF</h3>
+
+<p>
+Convierte HTML a PDF y genera nombres automáticos.
+</p>
+
+</button>
+
+</div>
+
+<div class="steps">
+
+<div class="step">
+
+<strong>1. Elegir carpeta destino</strong>
+
+<p>
+Se selecciona una sola vez. Luego el guardado es automático y silencioso.
+</p>
+
+</div>
+
+<div class="step">
+
+<strong>2. Seleccionar carpeta origen</strong>
+
+<p>
+El sistema detecta automáticamente PDFs o HTMLs según el modo activo.
+</p>
+
+</div>
+
+</div>
+
+<div class="controls">
+
+<button class="btn btn-secondary" id="btnDestino">
+📁 Elegir carpeta destino
+</button>
+
+<button class="btn btn-primary" id="btnProcesar" disabled>
+▶ Procesar archivos
+</button>
+
+</div>
+
+<input
+type="file"
+id="fileInput"
+webkitdirectory
+directory
+multiple
+style="display:none"
+>
+
+<div id="folderIndicator"></div>
+
+<div class="warning" id="compatWarning">
+
+⚠ Tu navegador NO soporta File System Access API.<br><br>
+
+Para descargas masivas SIN ventanas de guardar:
+<br>
+✅ Chrome moderno
+<br>
+✅ Edge moderno
+<br><br>
+
+Firefox y Safari obligan a descargar archivo por archivo por limitaciones del navegador.
+
+</div>
+
+<div class="info">
+
+✅ Renombrado automático real<br>
+✅ Extracción inteligente optimizada (HTML limpio + PDFs)<br>
+✅ Compatible con PDFs Andreani<br>
+✅ Conversión HTML → PDF integrada<br>
+✅ Guardado silencioso masivo<br>
+✅ Sin ventanas "Guardar como"<br>
+✅ Procesamiento de miles de archivos (Motor Concurrente Turbo)
+
+</div>
+
+<div id="progressArea">
+
+<div class="progress-header">
+
+<span id="statusLabel">
+Esperando...
+</span>
+
+<span id="counter">
+0/0
+</span>
+
+</div>
+
+<div class="progress-track">
+<div id="progressBar"></div>
+</div>
+
+<div class="stats">
+
+<div class="stat">
+
+<span class="stat-value total" id="statTotal">0</span>
+
+<div class="stat-label">
+TOTAL
+</div>
+
+</div>
+
+<div class="stat">
+
+<span class="stat-value ok" id="statOk">0</span>
+
+<div class="stat-label">
+OK
+</div>
+
+</div>
+
+<div class="stat">
+
+<span class="stat-value err" id="statErr">0</span>
+
+<div class="stat-label">
+ERRORES
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="done" id="doneBanner"></div>
+
+<div id="logConsole">
+
+<div class="log-line" style="color:#475569">
+> Sistema listo.
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div id="renderArea"></div>
+
+<script>
+
+////////////////////////////////////////////////////////////
+// LIBRERÍAS & REGEX PRE-COMPILADAS
+////////////////////////////////////////////////////////////
+
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const { jsPDF } = window.jspdf;
+
+// Expresiones regulares compiladas en memoria una sola vez
+const REGEX_PDF_SEGUIMIENTO  = /\b\d{15}\b/;
+const REGEX_PDF_ID           = /ID\s*[:#-]?\s*(\d+)/i;
+const REGEX_HTML_SEGUIMIENTO = /\b\d{12,25}\b/g;
+const REGEX_HTML_ID          = /ID\s*[:#\-\s]*([0-9]+)/i;
+
+////////////////////////////////////////////////////////////
+// ELEMENTOS
+////////////////////////////////////////////////////////////
+
+const modePDFBtn      = document.getElementById('modePDF');
+const modeHTMLBtn     = document.getElementById('modeHTML');
+
+const btnDestino      = document.getElementById('btnDestino');
+const btnProcesar     = document.getElementById('btnProcesar');
+
+const fileInput       = document.getElementById('fileInput');
+
+const folderIndicator = document.getElementById('folderIndicator');
+
+const progressArea    = document.getElementById('progressArea');
+const progressBar     = document.getElementById('progressBar');
+
+const statusLabel     = document.getElementById('statusLabel');
+const counter         = document.getElementById('counter');
+
+const statTotal       = document.getElementById('statTotal');
+const statOk          = document.getElementById('statOk');
+const statErr         = document.getElementById('statErr');
+
+const logConsole      = document.getElementById('logConsole');
+const doneBanner      = document.getElementById('doneBanner');
+
+const renderArea      = document.getElementById('renderArea');
+
+const compatWarning   = document.getElementById('compatWarning');
+
+////////////////////////////////////////////////////////////
+// VARIABLES
+////////////////////////////////////////////////////////////
+
+let currentMode = 'pdf';
+
+const fsaSupported = ('showDirectoryPicker' in window);
+
+let destDirHandle = null;
+let scrollScheduled = false;
+
+////////////////////////////////////////////////////////////
+// COMPATIBILIDAD
+////////////////////////////////////////////////////////////
+
+if(!fsaSupported){
+    compatWarning.style.display = 'block';
+    btnProcesar.disabled = false;
+}
+
+////////////////////////////////////////////////////////////
+// MODOS
+////////////////////////////////////////////////////////////
+
+modePDFBtn.onclick = () => {
+    currentMode = 'pdf';
+    modePDFBtn.classList.add('active');
+    modeHTMLBtn.classList.remove('active');
+    log('Modo activo: PDFs', '#38bdf8');
+};
+
+modeHTMLBtn.onclick = () => {
+    currentMode = 'html';
+    modeHTMLBtn.classList.add('active');
+    modePDFBtn.classList.remove('active');
+    log('Modo activo: HTML → PDF', '#38bdf8');
+};
+
+////////////////////////////////////////////////////////////
+// CARPETA DESTINO
+////////////////////////////////////////////////////////////
+
+btnDestino.onclick = async () => {
+
+    if(!fsaSupported){
+        alert('Tu navegador no soporta guardado silencioso.');
+        return;
+    }
+
+    try{
+        destDirHandle = await window.showDirectoryPicker({
+            mode:'readwrite'
+        });
+
+        folderIndicator.style.display = 'block';
+        folderIndicator.innerHTML = `✅ Carpeta destino: ${destDirHandle.name}`;
+        btnProcesar.disabled = false;
+
+        log(`Carpeta seleccionada: ${destDirHandle.name}`, '#22c55e');
+    }
+    catch(error){
+        if(error.name !== 'AbortError'){
+            log(`Error carpeta: ${error.message}`, '#ef4444');
+        }
+    }
+
+};
+
+////////////////////////////////////////////////////////////
+// BOTÓN PROCESAR
+////////////////////////////////////////////////////////////
+
+btnProcesar.onclick = () => {
+    fileInput.value = '';
+    fileInput.click();
+};
+
+////////////////////////////////////////////////////////////
+// INPUT FILES (CON POOL CONCURRENTE OPTIMIZADO)
+////////////////////////////////////////////////////////////
+
+fileInput.onchange = async (e) => {
+
+    const allFiles = Array.from(e.target.files);
+    let files = [];
+
+    if(currentMode === 'pdf'){
+        files = allFiles.filter(file =>
+            file.name.toLowerCase().endsWith('.pdf')
+        );
+    }else{
+        files = allFiles.filter(file => {
+            const name = file.name.toLowerCase();
+            return name.endsWith('.html') || name.endsWith('.htm');
+        });
+    }
+
+    if(files.length === 0){
+        log('No se encontraron archivos válidos.', '#eab308');
+        return;
+    }
+
+    const total = files.length;
+    resetUI(total);
+
+    let ok = 0;
+    let err = 0;
+    let completed = 0;
+    let currentIndex = 0;
+
+    // En modo PDF usamos 6 hilos simultáneos (o 1 si el navegador no soporta FSA para no saturar descargas).
+    // En modo HTML mantenemos 1 hilo estricto porque comparten el mismo #renderArea del DOM.
+    const concurrency = (currentMode === 'pdf' && fsaSupported) ? 6 : 1;
+
+    async function worker(){
+        while(currentIndex < total){
+            const idx = currentIndex++;
+            const file = files[idx];
+
+            try{
+                if(currentMode === 'pdf'){
+                    await processPDF(file);
+                }else{
+                    await processHTML(file);
+                }
+                ok++;
+                statOk.textContent = ok;
+            }
+            catch(error){
+                err++;
+                statErr.textContent = err;
+                log(`[ERROR] ${file.name}: ${error.message}`, '#ef4444');
+            }
+
+            completed++;
+            updateUI(completed, total, file.name);
+        }
+    }
+
+    const workers = [];
+    const activeWorkers = Math.min(concurrency, total);
+
+    for(let w = 0; w < activeWorkers; w++){
+        workers.push(worker());
+    }
+
+    await Promise.all(workers);
+
+    finishProcess(ok, err, total);
+
+};
+
+////////////////////////////////////////////////////////////
+// PROCESAR PDF (LECTURA ÚNICA DE MEMORIA)
+////////////////////////////////////////////////////////////
+
+async function processPDF(file){
+
+    // Leemos el ArrayBuffer una sola vez del disco
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Pasamos una copia (.slice(0)) a PDF.js porque el Worker transfiere y vacía el buffer recibido
+    const text = await extractTextFromBuffer(arrayBuffer.slice(0));
+
+    const seguimientoMatch = text.match(REGEX_PDF_SEGUIMIENTO);
+    const idMatch          = text.match(REGEX_PDF_ID);
+
+    const seguimiento = seguimientoMatch ? seguimientoMatch[0] : 'SIN_SEGUIMIENTO';
+    const id          = idMatch ? idMatch[1] : '0000';
+
+    const finalName = `${seguimiento}(id_${id}).pdf`;
+
+    // Guardamos reutilizando el arrayBuffer original sin volver a leer el archivo
+    await saveArrayBuffer(arrayBuffer, finalName);
+
+    log(`[PDF OK] ${file.name} → ${finalName}`, '#22c55e');
+
+}
+
+////////////////////////////////////////////////////////////
+// PROCESAR HTML (RENDER Y COMPRESIÓN ACELERADA)
+////////////////////////////////////////////////////////////
+
+async function processHTML(file){
+
+    const html = await file.text();
+
+    renderArea.innerHTML = html;
+
+    await waitImages();
+
+    // Extraemos el texto plano limpio del renderizado DOM para evitar interferencia de tags HTML
+    const textContent = renderArea.innerText || renderArea.textContent || '';
+
+    // Detección robusta de Seguimiento (números largos de 12 a 25 dígitos, p.ej. Andreani)
+    const trackingMatches =
+        textContent.match(REGEX_HTML_SEGUIMIENTO) || html.match(REGEX_HTML_SEGUIMIENTO);
+
+    const tracking = trackingMatches ? trackingMatches[0] : 'SIN_SEGUIMIENTO';
+
+    // Detección robusta de ID (busca patrones como ID:, ID -, ID#, o variantes similares en el texto plano)
+    let idMatch = textContent.match(REGEX_HTML_ID);
+
+    if(!idMatch){
+        // Fallback buscando en el HTML crudo por si acaso
+        idMatch = html.match(REGEX_HTML_ID);
+    }
+
+    const id = idMatch ? idMatch[1] : '0000';
+
+    // GENERAR PDF
+    const canvas = await html2canvas(renderArea, {
+        scale:2,
+        useCORS:true,
+        allowTaint:true,
+        backgroundColor:'#ffffff',
+        logging:false
+    });
+
+    // JPEG con calidad 0.92 codifica mucho más rápido que PNG en fondos blancos sin pérdida perceptible
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+    const pdf = new jsPDF({
+        orientation:'p',
+        unit:'mm',
+        format:'a4',
+        compress:true
+    });
+
+    const pdfWidth  = 210;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    // Modo 'FAST' acelera la inserción de la imagen dentro del PDF
+    pdf.addImage(
+        imgData,
+        'JPEG',
+        0,
+        0,
+        pdfWidth,
+        pdfHeight,
+        undefined,
+        'FAST'
+    );
+
+    const finalName = `${tracking}(id_${id}).pdf`;
+
+    // Obtenemos directamente el ArrayBuffer sin crear un Blob intermedio
+    const arrayBuffer = pdf.output('arraybuffer');
+
+    await saveArrayBuffer(arrayBuffer, finalName);
+
+    // Limpiamos el DOM inmediatamente para liberar recursos
+    renderArea.innerHTML = '';
+
+    log(`[HTML→PDF OK] ${file.name} → ${finalName}`, '#22c55e');
+
+}
+
+////////////////////////////////////////////////////////////
+// EXTRAER TEXTO PDF (CON LIBERACIÓN DE RAM)
+////////////////////////////////////////////////////////////
+
+async function extractTextFromBuffer(bufferCopy){
+
+    const loadingTask = pdfjsLib.getDocument({
+        data:bufferCopy,
+        disableFontFace:true,
+        isEvalSupported:false
+    });
+
+    const pdf = await loadingTask.promise;
+
+    try{
+        const pages = Math.min(pdf.numPages, 2);
+        const pagePromises = [];
+
+        // Leemos las páginas en paralelo
+        for(let i = 1; i <= pages; i++){
+            pagePromises.push(
+                pdf.getPage(i).then(async page => {
+                    const content = await page.getTextContent();
+                    const pageStr = content.items.map(item => item.str).join(' ');
+                    page.cleanup();
+                    return pageStr;
+                })
+            );
+        }
+
+        const pageTexts = await Promise.all(pagePromises);
+        return pageTexts.join(' ');
+    }
+    finally{
+        // Destruimos la instancia para evitar fugas de memoria en lotes grandes
+        await pdf.destroy();
+    }
+
+}
+
+////////////////////////////////////////////////////////////
+// SAVE SILENCIOSO
+////////////////////////////////////////////////////////////
+
+async function saveArrayBuffer(arrayBuffer, filename){
+
+    if(fsaSupported && destDirHandle){
+
+        const fileHandle = await destDirHandle.getFileHandle(
+            filename,
+            { create:true }
+        );
+
+        const writable = await fileHandle.createWritable();
+        await writable.write(arrayBuffer);
+        await writable.close();
+
+    }else{
+
+        const blob = new Blob(
+            [arrayBuffer],
+            { type:'application/pdf' }
+        );
+
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+
+        a.href     = url;
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    }
+
+}
+
+////////////////////////////////////////////////////////////
+// ESPERAR IMÁGENES (CON TIMEOUT DE SEGURIDAD)
+////////////////////////////////////////////////////////////
+
+function waitImages(){
+
+    const images   = renderArea.querySelectorAll('img');
+    const promises = [];
+
+    images.forEach(img => {
+
+        if(img.complete) return;
+
+        promises.push(
+            new Promise(resolve => {
+                const timer = setTimeout(resolve, 4000);
+                img.onload  = () => { clearTimeout(timer); resolve(); };
+                img.onerror = () => { clearTimeout(timer); resolve(); };
+            })
+        );
+
+    });
+
+    return Promise.all(promises);
+
+}
+
+////////////////////////////////////////////////////////////
+// UI
+////////////////////////////////////////////////////////////
+
+function resetUI(total){
+
+    progressArea.style.display = 'block';
+    doneBanner.style.display   = 'none';
+    progressBar.style.width    = '0%';
+
+    counter.textContent     = `0/${total}`;
+    statusLabel.textContent = 'Iniciando procesamiento...';
+    statusLabel.style.color = '#38bdf8';
+
+    statTotal.textContent = total;
+    statOk.textContent    = '0';
+    statErr.textContent   = '0';
+
+    logConsole.innerHTML = `
+        <div class="log-line" style="color:#475569">
+        > Procesamiento iniciado...
+        </div>
+    `;
+
+}
+
+function updateUI(current, total, filename){
+
+    progressBar.style.width = `${(current / total) * 100}%`;
+    counter.textContent     = `${current}/${total}`;
+
+    statusLabel.textContent = `Procesando: ${
+        filename.length > 42
+        ? filename.substring(0, 42) + '...'
+        : filename
+    }`;
+
+}
+
+function finishProcess(ok, err, total){
+
+    statusLabel.textContent = 'PROCESO FINALIZADO';
+    statusLabel.style.color = '#22c55e';
+
+    doneBanner.style.display = 'block';
+
+    doneBanner.innerHTML = `
+        <strong>
+        ✅ ${ok}/${total} archivos procesados
+        </strong>
+        <br><br>
+        ${
+            err > 0
+            ? `⚠ ${err} errores detectados`
+            : `Sin errores`
+        }
+    `;
+
+    log(`FINALIZADO → ${ok} OK · ${err} errores`, '#38bdf8');
+
+}
+
+////////////////////////////////////////////////////////////
+// LOG (SCROLL AGRUPADO CON REQUESTANIMATIONFRAME)
+////////////////////////////////////////////////////////////
+
+function log(msg, color = '#64748b'){
+
+    const line = document.createElement('div');
+    line.className = 'log-line';
+
+    line.innerHTML = `
+        <span class="log-time">
+        [${new Date().toLocaleTimeString()}]
+        </span>
+        <span style="color:${color}">
+        ${msg}
+        </span>
+    `;
+
+    logConsole.appendChild(line);
+
+    if(!scrollScheduled){
+        scrollScheduled = true;
+        requestAnimationFrame(() => {
+            logConsole.scrollTop = logConsole.scrollHeight;
+            scrollScheduled = false;
+        });
+    }
+
+}
+
+</script>
+
+</body>
+</html>
